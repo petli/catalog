@@ -20,6 +20,15 @@ Referenced objects are returned as a map:
 When referencing another object in a PUT or POST request either property can be used for top-level objects,
 but for e.g. `Media` objects that are referred via a `Work` only `href` is possible.
 
+Errors are returned with a code for the client, a message for logging or even displaying to users,
+and an optional link to further information:
+
+    {
+        "code": "invalid_alias",
+        "message": "The alias provided contains invalid characters",
+        "href": "https://catalog.elog.io/help/aliases"
+    }
+
 
 ## Work [/works/{workID}{?fields,include,annotations}]
 A work record.
@@ -33,10 +42,10 @@ When adding another Work's Media to this Work, add the Work Media endpoint for t
 work to the `media` list.  It will be rewritten to the Media endpoint for the target Work.
 
 To make the annotations easier to use in web pages the parameter `annotations` can be set
-to a list of property names, e.g. `title,locator`.  This will change the response from a plain list to a map, only
+to a list of property names, e.g. `title,locator`.  This will change the response from a plain list to a hash map, only
 including the listed properties.  (`all` means that all properties are included in the map.)
-The keys in this map are the `propertyName`, and the value a list of the Annotations for
-that property.  This allows easy access like `annotations.title[0].property.value` to show
+The keys in this map are `propertyName`, and the value a list of the Annotations for
+that property sorted on `score`.  This allows easy access like `annotations.title[0].property.value` to show
 e.g. a title without having to dig through the list.
 
 The fields returned in the response can be selected with the `fields` parameter.
@@ -48,6 +57,8 @@ The fields that can be populated are:
 - `owner`: either `owner.user` or `owner.org`
 - `added_by`
 - `updated_by`
+- `collabs.users`
+- `collabs.groups`
 
 TODO: decide if more fields should be allowed to be populated.  The lists can be rather heavy.
 
@@ -57,7 +68,7 @@ TODO: decide if more fields should be allowed to be populated.  The lists can be
     + fields (string, optional) ... Comma-separated list of top-level fields to include
         (filtering out all other fields), or exclude (if preceeded by `-`)
     + include (string, optional) ... Comma-separated list of subobjects to populate.
-    + annotations (string, optional) ... Select properties to get or update.
+    + annotations (string, optional) ... Select properties to return in an annotation hash map.
 
 + Model
     + Headers
@@ -201,23 +212,42 @@ See `PUT` for details.
 
 
 
-## Work collection [/works{?page,per_page,sort,fields,include,annotations}]
+## Work collection [/works{?page,per_page,sort,filter,fields,include,annotations}]
 
 ### List Works [GET]
 List all works visible to the current user, optionally applying paging, filters and sorting.
 
-TODO: define filters and sorting.
+Filters are specified as `filter=key:value`, typically an ID.  For now this is only intended to
+support basic use cases so filtering is limited to a single key.  Later, more complex browsing
+will be supported too.
+
+Filter keys:
+
+- `owner.user`
+- `owner.org`
+- `collabs.users`
+- `collabs.groups`
+- `sources.source_work`
+- `forked_from`
+- `media`
+
+Likewise sorting only supports one key for now, specified as `sort=key` (ascending) or `sort=-key` (descending).
+Sort keys:
+
+- `added_at`
+- `updated_at`
 
 Pagination is supported by returning a `Link` header with links according to 
-http://tools.ietf.org/html/rfc5005
+[RFC 5005](http://tools.ietf.org/html/rfc5005)
 
 + Parameters
     + page (number, optional) ... Page to start showing (first page has index 1)
     + per_page (number, optional) ... Page should contain these many records. Default and max values are system-dependent.
     + sort (string, optional) ... Sort response (see above). Default: "natural" sort.
+    + filter (string, optional) ... Filter response (see above). Default: no filtering.
     + fields (string, optional) ... Fields to include (see above)
     + include (string, optional) ... References to populate (see above)
-    + annotations (string, optional) ... Select properties to get or update.
+    + annotations (string, optional) ... Select properties to return in an annotation hash map.
 
 + Response 200 (application/json)
     + Headers
@@ -278,14 +308,16 @@ Or is this really up to the client's discretion and we should accept both?
 
 ## Create Work from an online source [/works/actions/fetch{?url,email}]
 
-Similar to uploading a file, this fetches information about a work that's available at a URL online
-and sends a confirmation email when the processing is finished.
+Similar to uploading a file, this fetches information about a work that's available at a URL online.
+
+A URL is returned that can be polled to check for the progress (see below).  It is also possible to request an
+email to be sent when the processing is finished.
 
 ### Fetch online source [POST]
 
 + Parameters
     + url (optional, string) ... The URL, if not specified in the request body.
-    + email (string, optional) ... User email, if not specified in the request body and there isn't already an active user session.
+    + email (string, optional) ... Request an email to this address when the processing is done.
 
 + Request (application/json)
 
@@ -297,8 +329,40 @@ and sends a confirmation email when the processing is finished.
 
 + Response 202 (application/json)
 
-        { "confirm_email": "foo@example.org" }
+        { "progress_url": "https://catalog.elog.io/process/916e592d7d63613d7321ee53" }
 
+
+## Check processing progress [/process/{jobID}{?timeout}]
+
+Clients should not construct a URL to this endpoint directly, only use the URL returned from one of the 
+processing endpoints when they accept a job.
+
+The job status will be one of:
+
+- `queued`
+- `running`
+- `finished`
+- `failed`
+
+If `finished`, a result will be included, which is job-specific.  If `failed`, an `error` will be included instead.
+
++ Parameters
+    + timeout (integer, optional) ... Use long-polling, sending response only when job is finished/failed,
+        timing out after this many seconds.  On timeout, sends whatever the job status is at that moment.
+
+### Check progress [GET]
+
++ Response 200 (application/json)
+
+        {
+            "status": "finished",
+            "result": {
+                "work": {
+                    "id": "5396e592d7d163613d7321ee",
+                    "href": "https://catalog.elog.io/works/5396e592d7d163613d7321ee"
+                }
+            }
+        }
 
 
 ## Media [/works/{workID}/media/{mediaID}{?annotations,fields,include}]
