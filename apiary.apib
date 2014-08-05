@@ -659,6 +659,75 @@ If `score` is omitted it is calculated from `property`.
         []
 
 
+## Source [/works/{workID}/sources/{sourceID}]
+
+A link to a source Work for the `workID` Work.
+
++ Parameters
+    + sourceID (string) ... ID for this source link, i.e. not the ID of the source work itself.
+
++ Model
+    + Headers
+
+            Link: <https://catalog.elog.io/works/5396e592d7d163613d7321ee/sources/6e592d7d63613d7321ee5391>;rel="self"
+
+    + Body
+
+            {
+                    "id": "6e592d7d63613d7321ee5391",
+                    "href": "https://catalog.elog.io/works/5396e592d7d163613d7321ee/sources/6e592d7d63613d7321ee5391",
+                    
+                    "source_work": {
+                        "id": "sourceWorkID",
+                        "href": "https://catalog.elog.io/works/sourceWorkID"
+                    },
+                    
+                    "added_by": {
+                        "id": "anotherUserID",
+                        "href": "https://catalog.elog.io/users/anotherUserID"
+                    },
+                    "added_at": "2014-04-14T02:15:15Z"
+            }
+
+### Get a Work Source [GET]
++ Response 200 (application/json)
+    [Source][]
+
+
+### Delete a Source link [DELETE]
++ Response 200
+    [Source][]
+
+
+## Work Source collection [/works/{workID}/sources]
+Endpoint for accessing all source links for a Work.  To just read them
+`Work.sources` can be used instead.
+
+### List Work Sources [GET]
++ Response 200 (application/json)
+
+        [{ "id": "..." }, { "id": "..." }]
+
+
+### Add a Work Source [POST]
+Only `source_work` is used from the request body, and it must contain either a valid Work `href`
+or `id` property.  The user must have permissions to read the source work to be able to link to it.
+
++ Request (application/json)
+
+        { "source_work": { "href": "https://catalog.elog.io/works/321ee5396e592d7d163613d7" } }
+
++ Response 201 (application/json)
+    [Source][]
+
+
+### Delete all source links for a Work [DELETE]
++ Response 200 (application/json)
+
+        []
+
+
+
 ## Lookup works by URI [/lookup{?uri,offset,count,include}]
 
 Lookup works based on a URI, typically either a URL denoting a web location
