@@ -252,7 +252,7 @@ Pagination is supported by returning a `Link` header with links according to
 + Response 200 (application/json)
     + Headers
     
-            Link: <?offset=0&count=N&...>;rel="first", <?offset=Z&count=N&...>;rel="last", <?offset=X&count=N&...>;rel="previous", <?offset=Y&count=N&...>;rel="next"
+            Link: <?page=1&per_page=N&...>;rel="first", <?page=1&per_page=N&...>;rel="last", <?page=1&per_page=N&...>;rel="previous", <?page=1&per_page=N&...>;rel="next"
 
     + Body
     
@@ -728,34 +728,76 @@ or `id` property.  The user must have permissions to read the source work to be 
 
 
 
-## Lookup works by URI [/lookup{?uri,offset,count,include}]
+## Lookup works by URI [/lookup/uri{?uri,context,page,per_page}]
 
 Lookup works based on a URI, typically either a URL denoting a web location
-or a URN indicating a hash or other non-web identifier.
+or a URN indicating a file hash or other non-web identifier.
 
 The best matches are always returned first.
 
 Pagination is supported by returning a `Link` header with links according to 
 http://tools.ietf.org/html/rfc5005
 
-### Lookup by URI [GET]
+### Get matching works [GET]
 
 + Parameters
     + uri (string) ... A URI to lookup. Multiple URIs can be specified by repeating the parameter.
-    + offset (number, optional) ... Skip this many records in the result. Default: 0
-    + count (number, optional) ... Return this many records. Default and max values are system-dependent.
-        If set to 1, it instructs that only the best Work object should be returned or a `404`, not a list of works.
-    + include (string, optional) ... Which sublists to include in the response objects.
-        See Work above for details.
+    + context (string, optional) ... The context for the lookup, typically the URL of the web page containing the URI queried.
+        On e.g. Twitter, Facebook, blogs etc, it should rather be the permalink to the tweet or post containing the URI.
+    + page (number, optional) ... Page to start showing (first page has index 1)
+    + per_page (number, optional) ... Page should contain these many records. Default and max values are system-dependent.
 
 + Response 200 (application/json)
     + Headers
-    
-            Link: <?offset=0&count=N&...>;rel="first", <?offset=Z&count=N&...>;rel="last", <?offset=X&count=N&...>;rel="previous", <?offset=Y&count=N&...>;rel="next"
+
+            Link: <?page=1&per_page=N&...>;rel="first", <?page=1&per_page=N&...>;rel="last", <?page=1&per_page=N&...>;rel="previous", <?page=1&per_page=N&...>;rel="next"    
+            
 
     + Body
     
-            []
+            [{
+                "href": "https://catalog.elog.io/works/5396e592d7d163613d7321ee",
+                "uri": "http://some.where/foo.jpg",
+                "property": "locator"
+                "score": 100
+            }]
+
+
+## Lookup works by block-median value hash [/lookup/bmvhash{?hash,src,context,page,per_page}]
+
+Lookup works based on a block-median value hash, a perceptual image hash.  The maximum hash distance
+is controlled by the catalog and cannot be changed by the client.
+
+The closest matches are always returned first.
+
+Pagination is supported by returning a `Link` header with links according to 
+http://tools.ietf.org/html/rfc5005
+
+### Get matching works [GET]
+
++ Parameters
+    + hash (string) ... The hash as a hexadecimal string.
+    * src (string, optional) ... The image source URL, if an online work is looked up.
+    + context (string, optional) ... The context for the lookup, typically the URL of the web page containing the image.
+        On e.g. Twitter, Facebook, blogs etc, it should rather be the permalink to the tweet or post containing the image.
+    + page (number, optional) ... Page to start showing (first page has index 1)
+    + per_page (number, optional) ... Page should contain these many records. Default and max values are system-dependent.
+
++ Response 200 (application/json)
+    + Headers
+
+            Link: <?page=1&per_page=N&...>;rel="first", <?page=1&per_page=N&...>;rel="last", <?page=1&per_page=N&...>;rel="previous", <?page=1&per_page=N&...>;rel="next"    
+            
+    + Body
+    
+            [{
+                "href": "https://catalog.elog.io/works/5396e592d7d163613d7321ee",
+                "distance": 3
+            },
+            {
+                "href": "https://catalog.elog.io/works/d7321ee5396e592d7d163613",
+                "distance": 8
+            }]
 
 
 ## Collection [/collections/{collectionID}]
