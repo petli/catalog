@@ -768,7 +768,11 @@ http://tools.ietf.org/html/rfc5005
 Lookup works based on a blockhash, a perceptual image hash.  The maximum hash distance
 is controlled by the catalog and cannot be changed by the client.
 
-The closest matches are always returned first.
+Some hashes (such
+as all 1's, all 0's, or half/half) are known to collide with very many images using
+a blockhash algorithm, typically on images with high contrast. The catalog will
+signal matches that are blacklisted by providing a link to the blacklist(s) where the
+hash has been listed. Clients can use this to optionally filter requests.
 
 Pagination is supported by returning a `Link` header with links according to 
 http://tools.ietf.org/html/rfc5005
@@ -792,7 +796,8 @@ http://tools.ietf.org/html/rfc5005
     
             [{
                 "href": "https://catalog.elog.io/works/5396e592d7d163613d7321ee",
-                "distance": 3
+                "distance": 3,
+                "blacklist": ["https://catalog.elog.io/default.blacklist.txt"]
             },
             {
                 "href": "https://catalog.elog.io/works/d7321ee5396e592d7d163613",
