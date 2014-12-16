@@ -733,6 +733,9 @@ or `id` property.  The user must have permissions to read the source work to be 
 Lookup works based on a URI, typically either a URL denoting a web location
 or a URN indicating a file hash or other non-web identifier.
 
+One item will be returned for each matching annotation, so a work may be included more than once 
+in the response.  Typically if a work has the same URI as both `locator` and `identifier`.
+
 The best matches are always returned first.
 
 Pagination is supported by returning a `Link` header with links according to 
